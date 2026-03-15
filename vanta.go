@@ -135,6 +135,7 @@ func main() {
 		newPoliciesCmd(),
 		newDocumentsCmd(),
 		newDiscoveredVendorsCmd(),
+		newVendorsCmd(),
 		newSchemaCmd(root),
 	)
 

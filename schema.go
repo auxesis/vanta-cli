@@ -150,6 +150,7 @@ func newSchemaCmd(root *cobra.Command) *cobra.Command {
 		"policies":           reflect.TypeOf(Policy{}),
 		"documents":          reflect.TypeOf(Document{}),
 		"discovered-vendors": reflect.TypeOf(DiscoveredVendor{}),
+		"vendors":            reflect.TypeOf(Vendor{}),
 	}
 
 	return &cobra.Command{
