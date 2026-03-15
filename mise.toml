@@ -1,6 +1,13 @@
 [tools]
 go = "latest"
 
+[tasks."build"]
+description = "Build binary"
+run = """
+go build
+echo "./vanta-cli"
+"""
+
 [tasks."test"]
 description = "Run tests"
 run = """
