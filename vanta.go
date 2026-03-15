@@ -4,10 +4,10 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"io"
 	"log"
 	"net/http"
 	"os"
+	"time"
 )
 
 // TokenResponse represents an authentication token returned by the /oauth/token endpoint
@@ -41,36 +41,104 @@ func getOAuthToken(clientID, clientSecret string) (*TokenResponse, error) {
 	return &token, nil
 }
 
-func main() {
-	clientID := os.Getenv("VANTA_CLIENT_ID")
-	clientSecret := os.Getenv("VANTA_CLIENT_SECRET")
+// DeactivateMetadata holds information about why and when a vulnerability was deactivated.
+type DeactivateMetadata struct {
+	DeactivatedBy                 string     `json:"deactivatedBy"`
+	DeactivatedOnDate             time.Time  `json:"deactivatedOnDate"`
+	DeactivationReason            string     `json:"deactivationReason"`
+	DeactivatedUntilDate          *time.Time `json:"deactivatedUntilDate"`
+	IsVulnDeactivatedIndefinitely bool       `json:"isVulnDeactivatedIndefinitely"`
+}
 
+// Vulnerability represents a single vulnerability returned by the Vanta API.
+type Vulnerability struct {
+	ID                 string              `json:"id"`
+	Name               string              `json:"name"`
+	Description        string              `json:"description"`
+	IntegrationID      string              `json:"integrationId"`
+	PackageIdentifier  string              `json:"packageIdentifier"`
+	VulnerabilityType  string              `json:"vulnerabilityType"`
+	TargetID           string              `json:"targetId"`
+	FirstDetectedDate  time.Time           `json:"firstDetectedDate"`
+	SourceDetectedDate *time.Time          `json:"sourceDetectedDate"`
+	LastDetectedDate   *time.Time          `json:"lastDetectedDate"`
+	Severity           string              `json:"severity"`
+	CVSSSeverityScore  float64             `json:"cvssSeverityScore"`
+	ScannerScore       *int                `json:"scannerScore"`
+	IsFixable          bool                `json:"isFixable"`
+	RemediateByDate    time.Time           `json:"remediateByDate"`
+	RelatedVulns       []string            `json:"relatedVulns"`
+	RelatedURLs        []string            `json:"relatedUrls"`
+	ExternalURL        string              `json:"externalURL"`
+	ScanSource         string              `json:"scanSource"`
+	DeactivateMetadata *DeactivateMetadata `json:"deactivateMetadata"`
+}
+
+// Client manages communication with the Vanta API.
+type Client struct {
+	BaseURL    string
+	httpClient *http.Client
+	token      string
+}
+
+// NewClient authenticates with the Vanta API and returns a ready-to-use Client.
+func NewClient(clientID, clientSecret string) (*Client, error) {
 	token, err := getOAuthToken(clientID, clientSecret)
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
+	return &Client{
+		BaseURL:    "https://api.vanta.com/v1",
+		httpClient: http.DefaultClient,
+		token:      token.AccessToken,
+	}, nil
+}
 
-	//url := "https://api.vanta.com/v1/customer-trust/accounts"
-	url := "https://api.vanta.com/v1/vulnerabilities"
-
-	req, err := http.NewRequest("GET", url, nil)
+// Vulnerabilities fetches all vulnerabilities from the Vanta API.
+func (c *Client) Vulnerabilities() ([]Vulnerability, error) {
+	req, err := http.NewRequest("GET", c.BaseURL+"/vulnerabilities", nil)
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
-
+	q := req.URL.Query()
+	q.Set("pageSize", "100")
+	req.URL.RawQuery = q.Encode()
 	req.Header.Add("accept", "application/json")
-	req.Header.Add("authorization", "Bearer "+token.AccessToken)
+	req.Header.Add("authorization", "Bearer "+c.token)
 
-	res, err := http.DefaultClient.Do(req)
+	res, err := c.httpClient.Do(req)
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 	defer res.Body.Close()
 
-	body, err := io.ReadAll(res.Body)
+	var wrapper struct {
+		Results struct {
+			PageInfo struct {
+				EndCursor       string `json:"endCursor"`
+				HasNextPage     bool   `json:"hasNextPage"`
+				HasPreviousPage bool   `json:"hasPreviousPage"`
+				StartCursor     string `json:"startCursor"`
+			} `json:"pageInfo"`
+			Data []Vulnerability `json:"data"`
+		} `json:"results"`
+	}
+	if err := json.NewDecoder(res.Body).Decode(&wrapper); err != nil {
+		return nil, err
+	}
+	return wrapper.Results.Data, nil
+}
+
+func main() {
+	client, err := NewClient(os.Getenv("VANTA_CLIENT_ID"), os.Getenv("VANTA_CLIENT_SECRET"))
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	fmt.Println(string(body))
+	vulns, err := client.Vulnerabilities()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Printf("%+v\n", vulns)
 }
