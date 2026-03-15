@@ -122,13 +122,12 @@ func NewClient(clientID, clientSecret string) (*Client, error) {
 	}, nil
 }
 
-// Vulnerabilities fetches all vulnerabilities from the Vanta API, following pagination.
-func (c *Client) Vulnerabilities() ([]Vulnerability, error) {
-	var all []Vulnerability
+func fetchAll[T any](c *Client, path string) ([]T, error) {
+	var all []T
 	cursor := ""
 
 	for {
-		req, err := http.NewRequest("GET", c.BaseURL+"/vulnerabilities", nil)
+		req, err := http.NewRequest("GET", c.BaseURL+path, nil)
 		if err != nil {
 			return nil, err
 		}
@@ -149,12 +148,10 @@ func (c *Client) Vulnerabilities() ([]Vulnerability, error) {
 		var wrapper struct {
 			Results struct {
 				PageInfo struct {
-					EndCursor       string `json:"endCursor"`
-					HasNextPage     bool   `json:"hasNextPage"`
-					HasPreviousPage bool   `json:"hasPreviousPage"`
-					StartCursor     string `json:"startCursor"`
+					EndCursor   string `json:"endCursor"`
+					HasNextPage bool   `json:"hasNextPage"`
 				} `json:"pageInfo"`
-				Data []Vulnerability `json:"data"`
+				Data []T `json:"data"`
 			} `json:"results"`
 		}
 		err = json.NewDecoder(res.Body).Decode(&wrapper)
@@ -174,56 +171,14 @@ func (c *Client) Vulnerabilities() ([]Vulnerability, error) {
 	return all, nil
 }
 
+// Vulnerabilities fetches all vulnerabilities from the Vanta API, following pagination.
+func (c *Client) Vulnerabilities() ([]Vulnerability, error) {
+	return fetchAll[Vulnerability](c, "/vulnerabilities")
+}
+
 // Policies fetches all policies from the Vanta API, following pagination.
 func (c *Client) Policies() ([]Policy, error) {
-	var all []Policy
-	cursor := ""
-
-	for {
-		req, err := http.NewRequest("GET", c.BaseURL+"/policies", nil)
-		if err != nil {
-			return nil, err
-		}
-		q := req.URL.Query()
-		q.Set("pageSize", "100")
-		if cursor != "" {
-			q.Set("pageCursor", cursor)
-		}
-		req.URL.RawQuery = q.Encode()
-		req.Header.Add("accept", "application/json")
-		req.Header.Add("authorization", "Bearer "+c.token)
-
-		res, err := c.httpClient.Do(req)
-		if err != nil {
-			return nil, err
-		}
-
-		var wrapper struct {
-			Results struct {
-				PageInfo struct {
-					EndCursor       string `json:"endCursor"`
-					HasNextPage     bool   `json:"hasNextPage"`
-					HasPreviousPage bool   `json:"hasPreviousPage"`
-					StartCursor     string `json:"startCursor"`
-				} `json:"pageInfo"`
-				Data []Policy `json:"data"`
-			} `json:"results"`
-		}
-		err = json.NewDecoder(res.Body).Decode(&wrapper)
-		res.Body.Close()
-		if err != nil {
-			return nil, err
-		}
-
-		all = append(all, wrapper.Results.Data...)
-
-		if !wrapper.Results.PageInfo.HasNextPage {
-			break
-		}
-		cursor = wrapper.Results.PageInfo.EndCursor
-	}
-
-	return all, nil
+	return fetchAll[Policy](c, "/policies")
 }
 
 var headers = []string{
