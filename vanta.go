@@ -136,6 +136,11 @@ func main() {
 		newDocumentsCmd(),
 		newDiscoveredVendorsCmd(),
 		newVendorsCmd(),
+		newControlsCmd(),
+		newFrameworksCmd(),
+		newGroupsCmd(),
+		newPeopleCmd(),
+		newTestsCmd(),
 		newSchemaCmd(root),
 	)
 
