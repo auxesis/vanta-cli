@@ -146,9 +146,10 @@ func buildSchema(root *cobra.Command, outputModels map[string]reflect.Type) sche
 
 func newSchemaCmd(root *cobra.Command) *cobra.Command {
 	outputModels := map[string]reflect.Type{
-		"vulnerabilities": reflect.TypeOf(Vulnerability{}),
-		"policies":        reflect.TypeOf(Policy{}),
-		"documents":       reflect.TypeOf(Document{}),
+		"vulnerabilities":    reflect.TypeOf(Vulnerability{}),
+		"policies":           reflect.TypeOf(Policy{}),
+		"documents":          reflect.TypeOf(Document{}),
+		"discovered-vendors": reflect.TypeOf(DiscoveredVendor{}),
 	}
 
 	return &cobra.Command{

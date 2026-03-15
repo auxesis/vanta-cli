@@ -134,6 +134,7 @@ func main() {
 		newVulnerabilitiesCmd(),
 		newPoliciesCmd(),
 		newDocumentsCmd(),
+		newDiscoveredVendorsCmd(),
 		newSchemaCmd(root),
 	)
 
