@@ -1,1 +1,8 @@
+# local dev config
 mise.local.toml
+
+# build outputs
+vanta-cli
+
+# tracking working
+TODO.md
