@@ -139,8 +139,14 @@ func main() {
 		newControlsCmd(),
 		newFrameworksCmd(),
 		newGroupsCmd(),
+		newIntegrationsCmd(),
+		newMonitoredComputersCmd(),
 		newPeopleCmd(),
+		newRiskScenariosCmd(),
 		newTestsCmd(),
+		newVendorRiskAttributesCmd(),
+		newVulnerabilityRemediationsCmd(),
+		newVulnerableAssetsCmd(),
 		newSchemaCmd(root),
 	)
 

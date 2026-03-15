@@ -146,16 +146,22 @@ func buildSchema(root *cobra.Command, outputModels map[string]reflect.Type) sche
 
 func newSchemaCmd(root *cobra.Command) *cobra.Command {
 	outputModels := map[string]reflect.Type{
-		"vulnerabilities":    reflect.TypeOf(Vulnerability{}),
-		"policies":           reflect.TypeOf(Policy{}),
-		"documents":          reflect.TypeOf(Document{}),
-		"discovered-vendors": reflect.TypeOf(DiscoveredVendor{}),
-		"vendors":            reflect.TypeOf(Vendor{}),
-		"controls":           reflect.TypeOf(Control{}),
-		"frameworks":         reflect.TypeOf(Framework{}),
-		"groups":             reflect.TypeOf(Group{}),
-		"people":             reflect.TypeOf(Person{}),
-		"tests":              reflect.TypeOf(Test{}),
+		"vulnerabilities":            reflect.TypeOf(Vulnerability{}),
+		"policies":                   reflect.TypeOf(Policy{}),
+		"documents":                  reflect.TypeOf(Document{}),
+		"discovered-vendors":         reflect.TypeOf(DiscoveredVendor{}),
+		"vendors":                    reflect.TypeOf(Vendor{}),
+		"controls":                   reflect.TypeOf(Control{}),
+		"frameworks":                 reflect.TypeOf(Framework{}),
+		"groups":                     reflect.TypeOf(Group{}),
+		"integrations":               reflect.TypeOf(Integration{}),
+		"monitored-computers":        reflect.TypeOf(MonitoredComputer{}),
+		"people":                     reflect.TypeOf(Person{}),
+		"risk-scenarios":             reflect.TypeOf(RiskScenario{}),
+		"tests":                      reflect.TypeOf(Test{}),
+		"vendor-risk-attributes":     reflect.TypeOf(VendorRiskAttribute{}),
+		"vulnerability-remediations": reflect.TypeOf(VulnerabilityRemediation{}),
+		"vulnerable-assets":          reflect.TypeOf(VulnerableAsset{}),
 	}
 
 	return &cobra.Command{
