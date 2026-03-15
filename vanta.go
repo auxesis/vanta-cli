@@ -2,11 +2,15 @@ package main
 
 import (
 	"bytes"
+	"encoding/csv"
 	"encoding/json"
+	"flag"
 	"fmt"
 	"log"
 	"net/http"
 	"os"
+	"strconv"
+	"strings"
 	"time"
 )
 
@@ -129,7 +133,78 @@ func (c *Client) Vulnerabilities() ([]Vulnerability, error) {
 	return wrapper.Results.Data, nil
 }
 
+var headers = []string{
+	"id", "name", "severity", "cvssSeverityScore", "isFixable",
+	"firstDetectedDate", "remediateByDate", "packageIdentifier",
+	"vulnerabilityType", "integrationId", "targetId", "scanSource", "externalURL",
+}
+
+func vulnRow(v Vulnerability) []string {
+	return []string{
+		v.ID,
+		v.Name,
+		v.Severity,
+		strconv.FormatFloat(v.CVSSSeverityScore, 'f', -1, 64),
+		strconv.FormatBool(v.IsFixable),
+		v.FirstDetectedDate.Format(time.RFC3339),
+		v.RemediateByDate.Format(time.RFC3339),
+		v.PackageIdentifier,
+		v.VulnerabilityType,
+		v.IntegrationID,
+		v.TargetID,
+		v.ScanSource,
+		v.ExternalURL,
+	}
+}
+
+func printJSON(vulns []Vulnerability) error {
+	enc := json.NewEncoder(os.Stdout)
+	enc.SetIndent("", "  ")
+	return enc.Encode(vulns)
+}
+
+func printCSV(vulns []Vulnerability) error {
+	w := csv.NewWriter(os.Stdout)
+	if err := w.Write(headers); err != nil {
+		return err
+	}
+	for _, v := range vulns {
+		if err := w.Write(vulnRow(v)); err != nil {
+			return err
+		}
+	}
+	w.Flush()
+	return w.Error()
+}
+
+func printTSV(vulns []Vulnerability) error {
+	w := csv.NewWriter(os.Stdout)
+	w.Comma = '\t'
+	if err := w.Write(headers); err != nil {
+		return err
+	}
+	for _, v := range vulns {
+		if err := w.Write(vulnRow(v)); err != nil {
+			return err
+		}
+	}
+	w.Flush()
+	return w.Error()
+}
+
+func printMarkdown(vulns []Vulnerability) {
+	fmt.Println("| " + strings.Join(headers, " | ") + " |")
+	fmt.Println("|" + strings.Repeat(" --- |", len(headers)))
+	for _, v := range vulns {
+		row := vulnRow(v)
+		fmt.Println("| " + strings.Join(row, " | ") + " |")
+	}
+}
+
 func main() {
+	format := flag.String("format", "json", "output format: json, csv, tsv, markdown")
+	flag.Parse()
+
 	client, err := NewClient(os.Getenv("VANTA_CLIENT_ID"), os.Getenv("VANTA_CLIENT_SECRET"))
 	if err != nil {
 		log.Fatal(err)
@@ -140,5 +215,22 @@ func main() {
 		log.Fatal(err)
 	}
 
-	fmt.Printf("%+v\n", vulns)
+	switch *format {
+	case "json":
+		if err := printJSON(vulns); err != nil {
+			log.Fatal(err)
+		}
+	case "csv":
+		if err := printCSV(vulns); err != nil {
+			log.Fatal(err)
+		}
+	case "tsv":
+		if err := printTSV(vulns); err != nil {
+			log.Fatal(err)
+		}
+	case "markdown":
+		printMarkdown(vulns)
+	default:
+		log.Fatalf("unknown format %q: must be json, csv, tsv, or markdown", *format)
+	}
 }
