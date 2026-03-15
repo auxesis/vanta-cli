@@ -134,6 +134,7 @@ func main() {
 		newVulnerabilitiesCmd(),
 		newPoliciesCmd(),
 		newDocumentsCmd(),
+		newSchemaCmd(root),
 	)
 
 	if err := root.Execute(); err != nil {
