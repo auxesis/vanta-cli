@@ -98,39 +98,56 @@ func NewClient(clientID, clientSecret string) (*Client, error) {
 	}, nil
 }
 
-// Vulnerabilities fetches all vulnerabilities from the Vanta API.
+// Vulnerabilities fetches all vulnerabilities from the Vanta API, following pagination.
 func (c *Client) Vulnerabilities() ([]Vulnerability, error) {
-	req, err := http.NewRequest("GET", c.BaseURL+"/vulnerabilities", nil)
-	if err != nil {
-		return nil, err
-	}
-	q := req.URL.Query()
-	q.Set("pageSize", "100")
-	req.URL.RawQuery = q.Encode()
-	req.Header.Add("accept", "application/json")
-	req.Header.Add("authorization", "Bearer "+c.token)
+	var all []Vulnerability
+	cursor := ""
 
-	res, err := c.httpClient.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer res.Body.Close()
+	for {
+		req, err := http.NewRequest("GET", c.BaseURL+"/vulnerabilities", nil)
+		if err != nil {
+			return nil, err
+		}
+		q := req.URL.Query()
+		q.Set("pageSize", "100")
+		if cursor != "" {
+			q.Set("pageCursor", cursor)
+		}
+		req.URL.RawQuery = q.Encode()
+		req.Header.Add("accept", "application/json")
+		req.Header.Add("authorization", "Bearer "+c.token)
 
-	var wrapper struct {
-		Results struct {
-			PageInfo struct {
-				EndCursor       string `json:"endCursor"`
-				HasNextPage     bool   `json:"hasNextPage"`
-				HasPreviousPage bool   `json:"hasPreviousPage"`
-				StartCursor     string `json:"startCursor"`
-			} `json:"pageInfo"`
-			Data []Vulnerability `json:"data"`
-		} `json:"results"`
+		res, err := c.httpClient.Do(req)
+		if err != nil {
+			return nil, err
+		}
+
+		var wrapper struct {
+			Results struct {
+				PageInfo struct {
+					EndCursor       string `json:"endCursor"`
+					HasNextPage     bool   `json:"hasNextPage"`
+					HasPreviousPage bool   `json:"hasPreviousPage"`
+					StartCursor     string `json:"startCursor"`
+				} `json:"pageInfo"`
+				Data []Vulnerability `json:"data"`
+			} `json:"results"`
+		}
+		err = json.NewDecoder(res.Body).Decode(&wrapper)
+		res.Body.Close()
+		if err != nil {
+			return nil, err
+		}
+
+		all = append(all, wrapper.Results.Data...)
+
+		if !wrapper.Results.PageInfo.HasNextPage {
+			break
+		}
+		cursor = wrapper.Results.PageInfo.EndCursor
 	}
-	if err := json.NewDecoder(res.Body).Decode(&wrapper); err != nil {
-		return nil, err
-	}
-	return wrapper.Results.Data, nil
+
+	return all, nil
 }
 
 var headers = []string{
