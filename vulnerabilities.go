@@ -3,10 +3,13 @@ package main
 import (
 	"encoding/csv"
 	"fmt"
+	"log"
 	"os"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/spf13/cobra"
 )
 
 // DeactivateMetadata holds information about why and when a vulnerability was deactivated.
@@ -107,4 +110,41 @@ func printVulnerabilitiesMarkdown(vulns []Vulnerability) {
 		row := vulnerabilityRow(v)
 		fmt.Println("| " + strings.Join(row, " | ") + " |")
 	}
+}
+
+func newVulnerabilitiesCmd() *cobra.Command {
+	var format string
+
+	cmd := &cobra.Command{
+		Use:     "vulnerabilities",
+		Aliases: []string{"vulns"},
+		Short:   "Fetch vulnerabilities",
+		Run: func(cmd *cobra.Command, args []string) {
+			vulns, err := newClient().Vulnerabilities()
+			if err != nil {
+				log.Fatal(err)
+			}
+			switch format {
+			case "json":
+				if err := printJSON(vulns); err != nil {
+					log.Fatal(err)
+				}
+			case "csv":
+				if err := printVulnerabilitiesCSV(vulns); err != nil {
+					log.Fatal(err)
+				}
+			case "tsv":
+				if err := printVulnerabilitiesTSV(vulns); err != nil {
+					log.Fatal(err)
+				}
+			case "markdown":
+				printVulnerabilitiesMarkdown(vulns)
+			default:
+				log.Fatalf("unknown format %q: must be json, csv, tsv, or markdown", format)
+			}
+		},
+	}
+
+	cmd.Flags().StringVar(&format, "format", "json", "output format: json, csv, tsv, markdown")
+	return cmd
 }

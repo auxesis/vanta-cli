@@ -3,9 +3,12 @@ package main
 import (
 	"encoding/csv"
 	"fmt"
+	"log"
 	"os"
 	"strings"
 	"time"
+
+	"github.com/spf13/cobra"
 )
 
 // PolicyDocument represents a single document attachment on a policy version.
@@ -89,4 +92,40 @@ func printPoliciesMarkdown(policies []Policy) {
 		row := policyRow(p)
 		fmt.Println("| " + strings.Join(row, " | ") + " |")
 	}
+}
+
+func newPoliciesCmd() *cobra.Command {
+	var format string
+
+	cmd := &cobra.Command{
+		Use:   "policies",
+		Short: "Fetch policies",
+		Run: func(cmd *cobra.Command, args []string) {
+			policies, err := newClient().Policies()
+			if err != nil {
+				log.Fatal(err)
+			}
+			switch format {
+			case "json":
+				if err := printJSON(policies); err != nil {
+					log.Fatal(err)
+				}
+			case "csv":
+				if err := printPoliciesCSV(policies); err != nil {
+					log.Fatal(err)
+				}
+			case "tsv":
+				if err := printPoliciesTSV(policies); err != nil {
+					log.Fatal(err)
+				}
+			case "markdown":
+				printPoliciesMarkdown(policies)
+			default:
+				log.Fatalf("unknown format %q: must be json, csv, tsv, or markdown", format)
+			}
+		},
+	}
+
+	cmd.Flags().StringVar(&format, "format", "json", "output format: json, csv, tsv, markdown")
+	return cmd
 }

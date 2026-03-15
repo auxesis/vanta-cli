@@ -3,10 +3,11 @@ package main
 import (
 	"bytes"
 	"encoding/json"
-	"flag"
 	"log"
 	"net/http"
 	"os"
+
+	"github.com/spf13/cobra"
 )
 
 // TokenResponse represents an authentication token returned by the /oauth/token endpoint
@@ -115,87 +116,27 @@ func printJSON(v any) error {
 	return enc.Encode(v)
 }
 
-func main() {
-	format := flag.String("format", "json", "output format: json, csv, tsv, markdown")
-	resource := flag.String("resource", "vulnerabilities", "resource to fetch: vulnerabilities, policies, documents")
-	flag.Parse()
-
+func newClient() *Client {
 	client, err := NewClient(os.Getenv("VANTA_CLIENT_ID"), os.Getenv("VANTA_CLIENT_SECRET"))
 	if err != nil {
 		log.Fatal(err)
 	}
+	return client
+}
 
-	switch *resource {
-	case "vulnerabilities":
-		vulns, err := client.Vulnerabilities()
-		if err != nil {
-			log.Fatal(err)
-		}
-		switch *format {
-		case "json":
-			if err := printJSON(vulns); err != nil {
-				log.Fatal(err)
-			}
-		case "csv":
-			if err := printVulnerabilitiesCSV(vulns); err != nil {
-				log.Fatal(err)
-			}
-		case "tsv":
-			if err := printVulnerabilitiesTSV(vulns); err != nil {
-				log.Fatal(err)
-			}
-		case "markdown":
-			printVulnerabilitiesMarkdown(vulns)
-		default:
-			log.Fatalf("unknown format %q: must be json, csv, tsv, or markdown", *format)
-		}
-	case "policies":
-		policies, err := client.Policies()
-		if err != nil {
-			log.Fatal(err)
-		}
-		switch *format {
-		case "json":
-			if err := printJSON(policies); err != nil {
-				log.Fatal(err)
-			}
-		case "csv":
-			if err := printPoliciesCSV(policies); err != nil {
-				log.Fatal(err)
-			}
-		case "tsv":
-			if err := printPoliciesTSV(policies); err != nil {
-				log.Fatal(err)
-			}
-		case "markdown":
-			printPoliciesMarkdown(policies)
-		default:
-			log.Fatalf("unknown format %q: must be json, csv, tsv, or markdown", *format)
-		}
-	case "documents":
-		docs, err := client.Documents()
-		if err != nil {
-			log.Fatal(err)
-		}
-		switch *format {
-		case "json":
-			if err := printJSON(docs); err != nil {
-				log.Fatal(err)
-			}
-		case "csv":
-			if err := printDocumentsCSV(docs); err != nil {
-				log.Fatal(err)
-			}
-		case "tsv":
-			if err := printDocumentsTSV(docs); err != nil {
-				log.Fatal(err)
-			}
-		case "markdown":
-			printDocumentsMarkdown(docs)
-		default:
-			log.Fatalf("unknown format %q: must be json, csv, tsv, or markdown", *format)
-		}
-	default:
-		log.Fatalf("unknown resource %q: must be vulnerabilities, policies, or documents", *resource)
+func main() {
+	root := &cobra.Command{
+		Use:   "vanta-cli",
+		Short: "Fetch data from the Vanta API",
+	}
+
+	root.AddCommand(
+		newVulnerabilitiesCmd(),
+		newPoliciesCmd(),
+		newDocumentsCmd(),
+	)
+
+	if err := root.Execute(); err != nil {
+		log.Fatal(err)
 	}
 }
