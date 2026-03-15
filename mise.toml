@@ -1,0 +1,28 @@
+[tools]
+go = "latest"
+
+[tasks."test"]
+description = "Run tests"
+run = """
+mise run test:lint
+mise run test:fmt
+mise run test:unit
+"""
+
+[tasks."test:lint"]
+description = "Run lint tests"
+run = """
+golint -set_exit_status
+"""
+
+[tasks."test:fmt"]
+description = "Run fmt tests"
+run = """
+go fmt
+"""
+
+[tasks."test:unit"]
+description = "Run unit tests"
+run = """
+go test ./...
+"""
