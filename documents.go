@@ -4,6 +4,7 @@ import (
 	"encoding/csv"
 	"fmt"
 	"log"
+	"net/url"
 	"os"
 	"strconv"
 	"strings"
@@ -25,9 +26,33 @@ type Document struct {
 	URL              string     `json:"url"`
 }
 
+// documentStatusAPIValues maps CLI status flag values to the API's display strings.
+var documentStatusAPIValues = map[string]string{
+	"NEEDS_DOCUMENT": "Needs document",
+	"NEEDS_UPDATE":   "Needs update",
+	"NOT_RELEVANT":   "Not relevant",
+	"OK":             "OK",
+}
+
 // Documents fetches all documents from the Vanta API, following pagination.
 func (c *Client) Documents() ([]Document, error) {
 	return fetchAll[Document](c, "/documents")
+}
+
+// DocumentsFiltered fetches documents filtered by framework and/or status.
+// The API supports multiple values via repeated query parameters in a single request.
+func (c *Client) DocumentsFiltered(frameworks, statuses []string) ([]Document, error) {
+	if len(frameworks) == 0 && len(statuses) == 0 {
+		return c.Documents()
+	}
+	p := url.Values{}
+	for _, fw := range frameworks {
+		p.Add("frameworkMatchesAny", fw)
+	}
+	for _, st := range statuses {
+		p.Add("statusMatchesAny", documentStatusAPIValues[st])
+	}
+	return fetchAll[Document](c, "/documents", p)
 }
 
 var documentHeaders = []string{
@@ -80,14 +105,36 @@ func printDocumentsMarkdown(docs []Document) {
 	}
 }
 
+var validDocumentStatuses = map[string]bool{
+	"NEEDS_DOCUMENT": true,
+	"NEEDS_UPDATE":   true,
+	"NOT_RELEVANT":   true,
+	"OK":             true,
+}
+
 func newDocumentsCmd() *cobra.Command {
 	var format string
+	var frameworkFlag string
+	var statusFlag string
 
 	cmd := &cobra.Command{
 		Use:   "documents",
 		Short: "Fetch documents",
 		Run: func(cmd *cobra.Command, args []string) {
-			docs, err := newClient().Documents()
+			var frameworks, statuses []string
+			for _, f := range splitFilter(frameworkFlag) {
+				if !validFrameworks[f] {
+					log.Fatalf("unknown framework %q: valid values are soc2", f)
+				}
+				frameworks = append(frameworks, f)
+			}
+			for _, s := range splitFilter(statusFlag) {
+				if !validDocumentStatuses[s] {
+					log.Fatalf("unknown status %q: valid values are NEEDS_DOCUMENT, NEEDS_UPDATE, NOT_RELEVANT, OK", s)
+				}
+				statuses = append(statuses, s)
+			}
+			docs, err := newClient().DocumentsFiltered(frameworks, statuses)
 			if err != nil {
 				log.Fatal(err)
 			}
@@ -113,5 +160,7 @@ func newDocumentsCmd() *cobra.Command {
 	}
 
 	cmd.Flags().StringVar(&format, "format", "json", "output format: json, csv, tsv, markdown")
+	cmd.Flags().StringVar(&frameworkFlag, "framework", "", "comma-separated framework filter (valid: soc2)")
+	cmd.Flags().StringVar(&statusFlag, "status", "", "comma-separated status filter (valid: NEEDS_DOCUMENT, NEEDS_UPDATE, NOT_RELEVANT, OK)")
 	return cmd
 }
