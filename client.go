@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"net/http"
+	"net/url"
 	"os"
 
 	"log"
@@ -60,7 +61,7 @@ func NewClient(clientID, clientSecret string) (*Client, error) {
 	}, nil
 }
 
-func fetchAll[T any](c *Client, path string) ([]T, error) {
+func fetchAll[T any](c *Client, path string, params ...url.Values) ([]T, error) {
 	var all []T
 	cursor := ""
 
@@ -73,6 +74,13 @@ func fetchAll[T any](c *Client, path string) ([]T, error) {
 		q.Set("pageSize", "100")
 		if cursor != "" {
 			q.Set("pageCursor", cursor)
+		}
+		if len(params) > 0 {
+			for key, vals := range params[0] {
+				for _, v := range vals {
+					q.Add(key, v)
+				}
+			}
 		}
 		req.URL.RawQuery = q.Encode()
 		req.Header.Add("accept", "application/json")

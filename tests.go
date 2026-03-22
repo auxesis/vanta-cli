@@ -4,6 +4,7 @@ import (
 	"encoding/csv"
 	"fmt"
 	"log"
+	"net/url"
 	"os"
 	"strconv"
 	"strings"
@@ -60,6 +61,49 @@ type Test struct {
 // Tests fetches all tests from the Vanta API, following pagination.
 func (c *Client) Tests() ([]Test, error) {
 	return fetchAll[Test](c, "/tests")
+}
+
+// TestsFiltered fetches tests filtered by framework and/or status.
+// The API only accepts a single value per filter per request, so multiple values
+// result in separate requests that are merged and deduplicated by test ID.
+func (c *Client) TestsFiltered(frameworks, statuses []string) ([]Test, error) {
+	if len(frameworks) == 0 && len(statuses) == 0 {
+		return c.Tests()
+	}
+
+	fws := frameworks
+	sts := statuses
+	if len(fws) == 0 {
+		fws = []string{""}
+	}
+	if len(sts) == 0 {
+		sts = []string{""}
+	}
+
+	seen := map[string]bool{}
+	var all []Test
+	for _, fw := range fws {
+		for _, st := range sts {
+			p := url.Values{}
+			if fw != "" {
+				p.Set("frameworkFilter", fw)
+			}
+			if st != "" {
+				p.Set("statusFilter", st)
+			}
+			results, err := fetchAll[Test](c, "/tests", p)
+			if err != nil {
+				return nil, err
+			}
+			for _, t := range results {
+				if !seen[t.ID] {
+					seen[t.ID] = true
+					all = append(all, t)
+				}
+			}
+		}
+	}
+	return all, nil
 }
 
 var testHeaders = []string{
@@ -130,14 +174,38 @@ func printTestsMarkdown(tests []Test) {
 	}
 }
 
+var validFrameworks = map[string]bool{
+	"soc2": true,
+}
+
+var validStatuses = map[string]bool{
+	"OK": true, "DEACTIVATED": true, "NEEDS_ATTENTION": true,
+	"IN_PROGRESS": true, "INVALID": true, "NOT_APPLICABLE": true,
+}
+
 func newTestsCmd() *cobra.Command {
 	var format string
+	var frameworkFlag string
+	var statusFlag string
 
 	cmd := &cobra.Command{
 		Use:   "tests",
 		Short: "Fetch tests",
 		Run: func(cmd *cobra.Command, args []string) {
-			tests, err := newClient().Tests()
+			var frameworks, statuses []string
+			for _, f := range splitFilter(frameworkFlag) {
+				if !validFrameworks[f] {
+					log.Fatalf("unknown framework %q: valid values are soc2", f)
+				}
+				frameworks = append(frameworks, f)
+			}
+			for _, s := range splitFilter(statusFlag) {
+				if !validStatuses[s] {
+					log.Fatalf("unknown status %q: valid values are OK, DEACTIVATED, NEEDS_ATTENTION, IN_PROGRESS, INVALID, NOT_APPLICABLE", s)
+				}
+				statuses = append(statuses, s)
+			}
+			tests, err := newClient().TestsFiltered(frameworks, statuses)
 			if err != nil {
 				log.Fatal(err)
 			}
@@ -163,5 +231,22 @@ func newTestsCmd() *cobra.Command {
 	}
 
 	cmd.Flags().StringVar(&format, "format", "json", "output format: json, csv, tsv, markdown")
+	cmd.Flags().StringVar(&frameworkFlag, "framework", "", "comma-separated framework filter (valid: soc2)")
+	cmd.Flags().StringVar(&statusFlag, "status", "", "comma-separated status filter (valid: OK, DEACTIVATED, NEEDS_ATTENTION, IN_PROGRESS, INVALID, NOT_APPLICABLE)")
 	return cmd
+}
+
+// splitFilter splits a comma-separated filter string, trimming spaces, returning nil for empty input.
+func splitFilter(s string) []string {
+	if s == "" {
+		return nil
+	}
+	parts := strings.Split(s, ",")
+	out := make([]string, 0, len(parts))
+	for _, p := range parts {
+		if t := strings.TrimSpace(p); t != "" {
+			out = append(out, t)
+		}
+	}
+	return out
 }
