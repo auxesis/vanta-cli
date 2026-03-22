@@ -6,9 +6,67 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"path/filepath"
+	"time"
 
 	"log"
 )
+
+// tokenCache is the on-disk representation of a cached OAuth token.
+type tokenCache struct {
+	AccessToken string    `json:"access_token"`
+	ExpiresAt   time.Time `json:"expires_at"`
+}
+
+func tokenCachePath() (string, error) {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(home, ".config", "vanta-cli", "token.json"), nil
+}
+
+func loadCachedToken() (*tokenCache, error) {
+	path, err := tokenCachePath()
+	if err != nil {
+		return nil, err
+	}
+	data, err := os.ReadFile(path)
+	if os.IsNotExist(err) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	var tc tokenCache
+	if err := json.Unmarshal(data, &tc); err != nil {
+		return nil, nil // treat malformed cache as a miss
+	}
+	// 30s buffer to avoid using a token that's about to expire
+	if time.Now().Add(30 * time.Second).After(tc.ExpiresAt) {
+		return nil, nil
+	}
+	return &tc, nil
+}
+
+func saveTokenCache(t *TokenResponse) error {
+	path, err := tokenCachePath()
+	if err != nil {
+		return err
+	}
+	if err := os.MkdirAll(filepath.Dir(path), 0700); err != nil {
+		return err
+	}
+	tc := tokenCache{
+		AccessToken: t.AccessToken,
+		ExpiresAt:   time.Now().Add(time.Duration(t.ExpiresIn) * time.Second),
+	}
+	data, err := json.Marshal(tc)
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(path, data, 0600)
+}
 
 // TokenResponse represents an authentication token returned by the /oauth/token endpoint
 type TokenResponse struct {
@@ -38,6 +96,7 @@ func getOAuthToken(clientID, clientSecret string) (*TokenResponse, error) {
 	if err := json.NewDecoder(resp.Body).Decode(&token); err != nil {
 		return nil, err
 	}
+	_ = saveTokenCache(&token) // best-effort; don't fail if cache write fails
 	return &token, nil
 }
 
@@ -50,6 +109,13 @@ type Client struct {
 
 // NewClient authenticates with the Vanta API and returns a ready-to-use Client.
 func NewClient(clientID, clientSecret string) (*Client, error) {
+	if tc, err := loadCachedToken(); err == nil && tc != nil {
+		return &Client{
+			BaseURL:    "https://api.vanta.com/v1",
+			httpClient: http.DefaultClient,
+			token:      tc.AccessToken,
+		}, nil
+	}
 	token, err := getOAuthToken(clientID, clientSecret)
 	if err != nil {
 		return nil, err
