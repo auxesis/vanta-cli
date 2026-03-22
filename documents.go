@@ -112,10 +112,38 @@ var validDocumentStatuses = map[string]bool{
 	"OK":             true,
 }
 
+func filterDocumentsDueBefore(docs []Document, dueBefore time.Time) []Document {
+	if dueBefore.IsZero() {
+		return docs
+	}
+	filtered := docs[:0]
+	for _, d := range docs {
+		if d.UploadStatusDate != nil && d.UploadStatusDate.Before(dueBefore) {
+			filtered = append(filtered, d)
+		}
+	}
+	return filtered
+}
+
+func filterDocumentsDueAfter(docs []Document, dueAfter time.Time) []Document {
+	if dueAfter.IsZero() {
+		return docs
+	}
+	filtered := docs[:0]
+	for _, d := range docs {
+		if d.UploadStatusDate != nil && d.UploadStatusDate.After(dueAfter) {
+			filtered = append(filtered, d)
+		}
+	}
+	return filtered
+}
+
 func newDocumentsCmd() *cobra.Command {
 	var format string
 	var frameworkFlag string
 	var statusFlag string
+	var dueBeforeFlag string
+	var dueAfterFlag string
 
 	cmd := &cobra.Command{
 		Use:   "documents",
@@ -134,10 +162,28 @@ func newDocumentsCmd() *cobra.Command {
 				}
 				statuses = append(statuses, s)
 			}
+			var dueBefore time.Time
+			if dueBeforeFlag != "" {
+				var err error
+				dueBefore, err = time.Parse(time.DateOnly, dueBeforeFlag)
+				if err != nil {
+					log.Fatalf("invalid --due-before %q: must be YYYY-MM-DD", dueBeforeFlag)
+				}
+			}
+			var dueAfter time.Time
+			if dueAfterFlag != "" {
+				var err error
+				dueAfter, err = time.Parse(time.DateOnly, dueAfterFlag)
+				if err != nil {
+					log.Fatalf("invalid --due-after %q: must be YYYY-MM-DD", dueAfterFlag)
+				}
+			}
 			docs, err := newClient().DocumentsFiltered(frameworks, statuses)
 			if err != nil {
 				log.Fatal(err)
 			}
+			docs = filterDocumentsDueBefore(docs, dueBefore)
+			docs = filterDocumentsDueAfter(docs, dueAfter)
 			switch format {
 			case "json":
 				if err := printJSON(docs); err != nil {
@@ -162,5 +208,7 @@ func newDocumentsCmd() *cobra.Command {
 	cmd.Flags().StringVar(&format, "format", "json", "output format: json, csv, tsv, markdown")
 	cmd.Flags().StringVar(&frameworkFlag, "framework", "", "comma-separated framework filter (valid: soc2)")
 	cmd.Flags().StringVar(&statusFlag, "status", "", "comma-separated status filter (valid: NEEDS_DOCUMENT, NEEDS_UPDATE, NOT_RELEVANT, OK)")
+	cmd.Flags().StringVar(&dueBeforeFlag, "due-before", "", "only show documents due before this date (YYYY-MM-DD)")
+	cmd.Flags().StringVar(&dueAfterFlag, "due-after", "", "only show documents due after this date (YYYY-MM-DD)")
 	return cmd
 }
