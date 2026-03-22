@@ -21,6 +21,7 @@ func main() {
 	}
 
 	root.AddCommand(
+		newTokenCmd(),
 		newVulnerabilitiesCmd(),
 		newPoliciesCmd(),
 		newDocumentsCmd(),
