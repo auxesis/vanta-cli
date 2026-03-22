@@ -109,6 +109,28 @@ func fetchAll[T any](c *Client, path string) ([]T, error) {
 	return all, nil
 }
 
+func fetchByID[T any](c *Client, path string) (T, error) {
+	var zero T
+	req, err := http.NewRequest("GET", c.BaseURL+path, nil)
+	if err != nil {
+		return zero, err
+	}
+	req.Header.Add("accept", "application/json")
+	req.Header.Add("authorization", "Bearer "+c.token)
+
+	res, err := c.httpClient.Do(req)
+	if err != nil {
+		return zero, err
+	}
+	defer res.Body.Close()
+
+	var result T
+	if err := json.NewDecoder(res.Body).Decode(&result); err != nil {
+		return zero, err
+	}
+	return result, nil
+}
+
 func newClient() *Client {
 	client, err := NewClient(os.Getenv("VANTA_CLIENT_ID"), os.Getenv("VANTA_CLIENT_SECRET"))
 	if err != nil {

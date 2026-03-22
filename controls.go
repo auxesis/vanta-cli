@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -39,13 +40,51 @@ type Control struct {
 	ModificationDate *time.Time           `json:"modificationDate"`
 }
 
+// DetailedControl extends Control with fields from the per-control detail endpoint.
+type DetailedControl struct {
+	Control
+	NumDocumentsPassing int     `json:"numDocumentsPassing"`
+	NumDocumentsTotal   int     `json:"numDocumentsTotal"`
+	NumTestsPassing     int     `json:"numTestsPassing"`
+	NumTestsTotal       int     `json:"numTestsTotal"`
+	Status              string  `json:"status"`
+	Note                *string `json:"note"`
+}
+
 // Controls fetches all controls from the Vanta API, following pagination.
 func (c *Client) Controls() ([]Control, error) {
 	return fetchAll[Control](c, "/controls")
 }
 
+// ControlByID fetches a single control by ID from the detail endpoint.
+func (c *Client) ControlByID(id string) (DetailedControl, error) {
+	return fetchByID[DetailedControl](c, "/controls/"+id)
+}
+
+// ControlsDetailed fetches all controls then enriches each with detail data.
+func (c *Client) ControlsDetailed() ([]DetailedControl, error) {
+	controls, err := c.Controls()
+	if err != nil {
+		return nil, err
+	}
+	detailed := make([]DetailedControl, 0, len(controls))
+	for _, ctrl := range controls {
+		d, err := c.ControlByID(ctrl.ID)
+		if err != nil {
+			return nil, fmt.Errorf("fetching detail for control %s: %w", ctrl.ID, err)
+		}
+		detailed = append(detailed, d)
+	}
+	return detailed, nil
+}
+
 var controlHeaders = []string{
 	"id", "externalId", "name", "source", "role", "owner", "domains",
+}
+
+var controlDetailedHeaders = []string{
+	"id", "externalId", "name", "source", "role", "owner", "domains",
+	"status", "numTestsPassing", "numTestsTotal", "numDocumentsPassing", "numDocumentsTotal", "note",
 }
 
 func controlRow(v Control) []string {
@@ -62,6 +101,21 @@ func controlRow(v Control) []string {
 		owner,
 		strings.Join(v.Domains, "|"),
 	}
+}
+
+func controlDetailedRow(v DetailedControl) []string {
+	note := ""
+	if v.Note != nil {
+		note = *v.Note
+	}
+	return append(controlRow(v.Control),
+		v.Status,
+		strconv.Itoa(v.NumTestsPassing),
+		strconv.Itoa(v.NumTestsTotal),
+		strconv.Itoa(v.NumDocumentsPassing),
+		strconv.Itoa(v.NumDocumentsTotal),
+		note,
+	)
 }
 
 func printControlsCSV(controls []Control) error {
@@ -102,14 +156,80 @@ func printControlsMarkdown(controls []Control) {
 	}
 }
 
+func printDetailedControlsCSV(controls []DetailedControl) error {
+	w := csv.NewWriter(os.Stdout)
+	if err := w.Write(controlDetailedHeaders); err != nil {
+		return err
+	}
+	for _, v := range controls {
+		if err := w.Write(controlDetailedRow(v)); err != nil {
+			return err
+		}
+	}
+	w.Flush()
+	return w.Error()
+}
+
+func printDetailedControlsTSV(controls []DetailedControl) error {
+	w := csv.NewWriter(os.Stdout)
+	w.Comma = '\t'
+	if err := w.Write(controlDetailedHeaders); err != nil {
+		return err
+	}
+	for _, v := range controls {
+		if err := w.Write(controlDetailedRow(v)); err != nil {
+			return err
+		}
+	}
+	w.Flush()
+	return w.Error()
+}
+
+func printDetailedControlsMarkdown(controls []DetailedControl) {
+	fmt.Println("| " + strings.Join(controlDetailedHeaders, " | ") + " |")
+	fmt.Println("|" + strings.Repeat(" --- |", len(controlDetailedHeaders)))
+	for _, v := range controls {
+		row := controlDetailedRow(v)
+		fmt.Println("| " + strings.Join(row, " | ") + " |")
+	}
+}
+
 func newControlsCmd() *cobra.Command {
 	var format string
+	var detailed bool
 
 	cmd := &cobra.Command{
 		Use:   "controls",
 		Short: "Fetch controls",
 		Run: func(cmd *cobra.Command, args []string) {
-			controls, err := newClient().Controls()
+			client := newClient()
+			if detailed {
+				controls, err := client.ControlsDetailed()
+				if err != nil {
+					log.Fatal(err)
+				}
+				switch format {
+				case "json":
+					if err := printJSON(controls); err != nil {
+						log.Fatal(err)
+					}
+				case "csv":
+					if err := printDetailedControlsCSV(controls); err != nil {
+						log.Fatal(err)
+					}
+				case "tsv":
+					if err := printDetailedControlsTSV(controls); err != nil {
+						log.Fatal(err)
+					}
+				case "markdown":
+					printDetailedControlsMarkdown(controls)
+				default:
+					log.Fatalf("unknown format %q: must be json, csv, tsv, or markdown", format)
+				}
+				return
+			}
+
+			controls, err := client.Controls()
 			if err != nil {
 				log.Fatal(err)
 			}
@@ -135,5 +255,6 @@ func newControlsCmd() *cobra.Command {
 	}
 
 	cmd.Flags().StringVar(&format, "format", "json", "output format: json, csv, tsv, markdown")
+	cmd.Flags().BoolVar(&detailed, "detailed", false, "fetch per-control detail (status, test/document counts, note)")
 	return cmd
 }
