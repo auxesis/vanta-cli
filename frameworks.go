@@ -85,6 +85,14 @@ func printFrameworksMarkdown(frameworks []Framework) {
 		row := frameworkRow(f)
 		fmt.Println("| " + strings.Join(row, " | ") + " |")
 	}
+
+}
+func printFrameworksPrettyMarkdown(frameworks []Framework) {
+	rows := make([][]string, len(frameworks))
+	for i, item := range frameworks {
+		rows[i] = frameworkRow(item)
+	}
+	printPrettyMarkdown(frameworkHeaders, rows)
 }
 
 func newFrameworksCmd() *cobra.Command {
@@ -113,12 +121,14 @@ func newFrameworksCmd() *cobra.Command {
 				}
 			case "markdown":
 				printFrameworksMarkdown(frameworks)
+			case "pretty_markdown":
+				printFrameworksPrettyMarkdown(frameworks)
 			default:
-				log.Fatalf("unknown format %q: must be json, csv, tsv, or markdown", format)
+				log.Fatalf("unknown format %q: must be json, csv, tsv, markdown, or pretty_markdown", format)
 			}
 		},
 	}
 
-	cmd.Flags().StringVar(&format, "format", "json", "output format: json, csv, tsv, markdown")
+	cmd.Flags().StringVar(&format, "format", "json", "output format: json, csv, tsv, markdown, pretty_markdown")
 	return cmd
 }

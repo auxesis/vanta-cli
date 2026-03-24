@@ -103,6 +103,14 @@ func printDocumentsMarkdown(docs []Document) {
 		row := documentRow(d)
 		fmt.Println("| " + strings.Join(row, " | ") + " |")
 	}
+
+}
+func printDocumentsPrettyMarkdown(docs []Document) {
+	rows := make([][]string, len(docs))
+	for i, item := range docs {
+		rows[i] = documentRow(item)
+	}
+	printPrettyMarkdown(documentHeaders, rows)
 }
 
 var validDocumentStatuses = map[string]bool{
@@ -199,13 +207,15 @@ func newDocumentsCmd() *cobra.Command {
 				}
 			case "markdown":
 				printDocumentsMarkdown(docs)
+			case "pretty_markdown":
+				printDocumentsPrettyMarkdown(docs)
 			default:
-				log.Fatalf("unknown format %q: must be json, csv, tsv, or markdown", format)
+				log.Fatalf("unknown format %q: must be json, csv, tsv, markdown, or pretty_markdown", format)
 			}
 		},
 	}
 
-	cmd.Flags().StringVar(&format, "format", "json", "output format: json, csv, tsv, markdown")
+	cmd.Flags().StringVar(&format, "format", "json", "output format: json, csv, tsv, markdown, pretty_markdown")
 	cmd.Flags().StringVar(&frameworkFlag, "framework", "", "comma-separated framework filter (valid: soc2)")
 	cmd.Flags().StringVar(&statusFlag, "status", "", "comma-separated status filter (valid: NEEDS_DOCUMENT, NEEDS_UPDATE, NOT_RELEVANT, OK)")
 	cmd.Flags().StringVar(&dueBeforeFlag, "due-before", "", "only show documents due before this date (YYYY-MM-DD)")

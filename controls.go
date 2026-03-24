@@ -194,6 +194,22 @@ func printDetailedControlsMarkdown(controls []DetailedControl) {
 	}
 }
 
+func printDetailedControlsPrettyMarkdown(controls []DetailedControl) {
+	rows := make([][]string, len(controls))
+	for i, item := range controls {
+		rows[i] = controlDetailedRow(item)
+	}
+	printPrettyMarkdown(controlDetailedHeaders, rows)
+}
+
+func printControlsPrettyMarkdown(controls []Control) {
+	rows := make([][]string, len(controls))
+	for i, item := range controls {
+		rows[i] = controlRow(item)
+	}
+	printPrettyMarkdown(controlHeaders, rows)
+}
+
 func newControlsCmd() *cobra.Command {
 	var format string
 	var detailed bool
@@ -223,8 +239,10 @@ func newControlsCmd() *cobra.Command {
 					}
 				case "markdown":
 					printDetailedControlsMarkdown(controls)
+				case "pretty_markdown":
+					printDetailedControlsPrettyMarkdown(controls)
 				default:
-					log.Fatalf("unknown format %q: must be json, csv, tsv, or markdown", format)
+					log.Fatalf("unknown format %q: must be json, csv, tsv, markdown, or pretty_markdown", format)
 				}
 				return
 			}
@@ -248,13 +266,15 @@ func newControlsCmd() *cobra.Command {
 				}
 			case "markdown":
 				printControlsMarkdown(controls)
+			case "pretty_markdown":
+				printControlsPrettyMarkdown(controls)
 			default:
-				log.Fatalf("unknown format %q: must be json, csv, tsv, or markdown", format)
+				log.Fatalf("unknown format %q: must be json, csv, tsv, markdown, or pretty_markdown", format)
 			}
 		},
 	}
 
-	cmd.Flags().StringVar(&format, "format", "json", "output format: json, csv, tsv, markdown")
+	cmd.Flags().StringVar(&format, "format", "json", "output format: json, csv, tsv, markdown, pretty_markdown")
 	cmd.Flags().BoolVar(&detailed, "detailed", false, "fetch per-control detail (status, test/document counts, note)")
 	return cmd
 }

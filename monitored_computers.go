@@ -132,6 +132,14 @@ func printMonitoredComputersMarkdown(computers []MonitoredComputer) {
 		row := monitoredComputerRow(m)
 		fmt.Println("| " + strings.Join(row, " | ") + " |")
 	}
+
+}
+func printMonitoredComputersPrettyMarkdown(items []MonitoredComputer) {
+	rows := make([][]string, len(items))
+	for i, item := range items {
+		rows[i] = monitoredComputerRow(item)
+	}
+	printPrettyMarkdown(monitoredComputerHeaders, rows)
 }
 
 func newMonitoredComputersCmd() *cobra.Command {
@@ -160,12 +168,14 @@ func newMonitoredComputersCmd() *cobra.Command {
 				}
 			case "markdown":
 				printMonitoredComputersMarkdown(items)
+			case "pretty_markdown":
+				printMonitoredComputersPrettyMarkdown(items)
 			default:
-				log.Fatalf("unknown format %q: must be json, csv, tsv, or markdown", format)
+				log.Fatalf("unknown format %q: must be json, csv, tsv, markdown, or pretty_markdown", format)
 			}
 		},
 	}
 
-	cmd.Flags().StringVar(&format, "format", "json", "output format: json, csv, tsv, markdown")
+	cmd.Flags().StringVar(&format, "format", "json", "output format: json, csv, tsv, markdown, pretty_markdown")
 	return cmd
 }

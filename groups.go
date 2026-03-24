@@ -71,6 +71,14 @@ func printGroupsMarkdown(groups []Group) {
 		row := groupRow(g)
 		fmt.Println("| " + strings.Join(row, " | ") + " |")
 	}
+
+}
+func printGroupsPrettyMarkdown(groups []Group) {
+	rows := make([][]string, len(groups))
+	for i, item := range groups {
+		rows[i] = groupRow(item)
+	}
+	printPrettyMarkdown(groupHeaders, rows)
 }
 
 func newGroupsCmd() *cobra.Command {
@@ -99,12 +107,14 @@ func newGroupsCmd() *cobra.Command {
 				}
 			case "markdown":
 				printGroupsMarkdown(groups)
+			case "pretty_markdown":
+				printGroupsPrettyMarkdown(groups)
 			default:
-				log.Fatalf("unknown format %q: must be json, csv, tsv, or markdown", format)
+				log.Fatalf("unknown format %q: must be json, csv, tsv, markdown, or pretty_markdown", format)
 			}
 		},
 	}
 
-	cmd.Flags().StringVar(&format, "format", "json", "output format: json, csv, tsv, markdown")
+	cmd.Flags().StringVar(&format, "format", "json", "output format: json, csv, tsv, markdown, pretty_markdown")
 	return cmd
 }

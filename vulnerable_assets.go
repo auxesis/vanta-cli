@@ -103,6 +103,14 @@ func printVulnerableAssetsMarkdown(items []VulnerableAsset) {
 		row := vulnerableAssetRow(v)
 		fmt.Println("| " + strings.Join(row, " | ") + " |")
 	}
+
+}
+func printVulnerableAssetsPrettyMarkdown(items []VulnerableAsset) {
+	rows := make([][]string, len(items))
+	for i, item := range items {
+		rows[i] = vulnerableAssetRow(item)
+	}
+	printPrettyMarkdown(vulnerableAssetHeaders, rows)
 }
 
 func newVulnerableAssetsCmd() *cobra.Command {
@@ -131,12 +139,14 @@ func newVulnerableAssetsCmd() *cobra.Command {
 				}
 			case "markdown":
 				printVulnerableAssetsMarkdown(items)
+			case "pretty_markdown":
+				printVulnerableAssetsPrettyMarkdown(items)
 			default:
-				log.Fatalf("unknown format %q: must be json, csv, tsv, or markdown", format)
+				log.Fatalf("unknown format %q: must be json, csv, tsv, markdown, or pretty_markdown", format)
 			}
 		},
 	}
 
-	cmd.Flags().StringVar(&format, "format", "json", "output format: json, csv, tsv, markdown")
+	cmd.Flags().StringVar(&format, "format", "json", "output format: json, csv, tsv, markdown, pretty_markdown")
 	return cmd
 }

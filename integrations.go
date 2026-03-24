@@ -87,6 +87,14 @@ func printIntegrationsMarkdown(integrations []Integration) {
 		row := integrationRow(i)
 		fmt.Println("| " + strings.Join(row, " | ") + " |")
 	}
+
+}
+func printIntegrationsPrettyMarkdown(items []Integration) {
+	rows := make([][]string, len(items))
+	for i, item := range items {
+		rows[i] = integrationRow(item)
+	}
+	printPrettyMarkdown(integrationHeaders, rows)
 }
 
 func newIntegrationsCmd() *cobra.Command {
@@ -115,12 +123,14 @@ func newIntegrationsCmd() *cobra.Command {
 				}
 			case "markdown":
 				printIntegrationsMarkdown(items)
+			case "pretty_markdown":
+				printIntegrationsPrettyMarkdown(items)
 			default:
-				log.Fatalf("unknown format %q: must be json, csv, tsv, or markdown", format)
+				log.Fatalf("unknown format %q: must be json, csv, tsv, markdown, or pretty_markdown", format)
 			}
 		},
 	}
 
-	cmd.Flags().StringVar(&format, "format", "json", "output format: json, csv, tsv, markdown")
+	cmd.Flags().StringVar(&format, "format", "json", "output format: json, csv, tsv, markdown, pretty_markdown")
 	return cmd
 }

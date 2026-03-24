@@ -76,6 +76,14 @@ func printVendorRiskAttributesMarkdown(items []VendorRiskAttribute) {
 		row := vendorRiskAttributeRow(v)
 		fmt.Println("| " + strings.Join(row, " | ") + " |")
 	}
+
+}
+func printVendorRiskAttributesPrettyMarkdown(items []VendorRiskAttribute) {
+	rows := make([][]string, len(items))
+	for i, item := range items {
+		rows[i] = vendorRiskAttributeRow(item)
+	}
+	printPrettyMarkdown(vendorRiskAttributeHeaders, rows)
 }
 
 func newVendorRiskAttributesCmd() *cobra.Command {
@@ -104,12 +112,14 @@ func newVendorRiskAttributesCmd() *cobra.Command {
 				}
 			case "markdown":
 				printVendorRiskAttributesMarkdown(items)
+			case "pretty_markdown":
+				printVendorRiskAttributesPrettyMarkdown(items)
 			default:
-				log.Fatalf("unknown format %q: must be json, csv, tsv, or markdown", format)
+				log.Fatalf("unknown format %q: must be json, csv, tsv, markdown, or pretty_markdown", format)
 			}
 		},
 	}
 
-	cmd.Flags().StringVar(&format, "format", "json", "output format: json, csv, tsv, markdown")
+	cmd.Flags().StringVar(&format, "format", "json", "output format: json, csv, tsv, markdown, pretty_markdown")
 	return cmd
 }

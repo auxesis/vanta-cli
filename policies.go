@@ -92,6 +92,14 @@ func printPoliciesMarkdown(policies []Policy) {
 		row := policyRow(p)
 		fmt.Println("| " + strings.Join(row, " | ") + " |")
 	}
+
+}
+func printPoliciesPrettyMarkdown(policies []Policy) {
+	rows := make([][]string, len(policies))
+	for i, item := range policies {
+		rows[i] = policyRow(item)
+	}
+	printPrettyMarkdown(policyHeaders, rows)
 }
 
 func newPoliciesCmd() *cobra.Command {
@@ -120,12 +128,14 @@ func newPoliciesCmd() *cobra.Command {
 				}
 			case "markdown":
 				printPoliciesMarkdown(policies)
+			case "pretty_markdown":
+				printPoliciesPrettyMarkdown(policies)
 			default:
-				log.Fatalf("unknown format %q: must be json, csv, tsv, or markdown", format)
+				log.Fatalf("unknown format %q: must be json, csv, tsv, markdown, or pretty_markdown", format)
 			}
 		},
 	}
 
-	cmd.Flags().StringVar(&format, "format", "json", "output format: json, csv, tsv, markdown")
+	cmd.Flags().StringVar(&format, "format", "json", "output format: json, csv, tsv, markdown, pretty_markdown")
 	return cmd
 }

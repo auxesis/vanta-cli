@@ -93,6 +93,14 @@ func printRiskScenariosMarkdown(scenarios []RiskScenario) {
 		row := riskScenarioRow(r)
 		fmt.Println("| " + strings.Join(row, " | ") + " |")
 	}
+
+}
+func printRiskScenariosPrettyMarkdown(scenarios []RiskScenario) {
+	rows := make([][]string, len(scenarios))
+	for i, item := range scenarios {
+		rows[i] = riskScenarioRow(item)
+	}
+	printPrettyMarkdown(riskScenarioHeaders, rows)
 }
 
 func newRiskScenariosCmd() *cobra.Command {
@@ -121,12 +129,14 @@ func newRiskScenariosCmd() *cobra.Command {
 				}
 			case "markdown":
 				printRiskScenariosMarkdown(items)
+			case "pretty_markdown":
+				printRiskScenariosPrettyMarkdown(items)
 			default:
-				log.Fatalf("unknown format %q: must be json, csv, tsv, or markdown", format)
+				log.Fatalf("unknown format %q: must be json, csv, tsv, markdown, or pretty_markdown", format)
 			}
 		},
 	}
 
-	cmd.Flags().StringVar(&format, "format", "json", "output format: json, csv, tsv, markdown")
+	cmd.Flags().StringVar(&format, "format", "json", "output format: json, csv, tsv, markdown, pretty_markdown")
 	return cmd
 }

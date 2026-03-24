@@ -110,6 +110,14 @@ func printVulnerabilitiesMarkdown(vulns []Vulnerability) {
 		row := vulnerabilityRow(v)
 		fmt.Println("| " + strings.Join(row, " | ") + " |")
 	}
+
+}
+func printVulnerabilitiesPrettyMarkdown(vulns []Vulnerability) {
+	rows := make([][]string, len(vulns))
+	for i, item := range vulns {
+		rows[i] = vulnerabilityRow(item)
+	}
+	printPrettyMarkdown(vulnerabilityHeaders, rows)
 }
 
 func newVulnerabilitiesCmd() *cobra.Command {
@@ -139,12 +147,14 @@ func newVulnerabilitiesCmd() *cobra.Command {
 				}
 			case "markdown":
 				printVulnerabilitiesMarkdown(vulns)
+			case "pretty_markdown":
+				printVulnerabilitiesPrettyMarkdown(vulns)
 			default:
-				log.Fatalf("unknown format %q: must be json, csv, tsv, or markdown", format)
+				log.Fatalf("unknown format %q: must be json, csv, tsv, markdown, or pretty_markdown", format)
 			}
 		},
 	}
 
-	cmd.Flags().StringVar(&format, "format", "json", "output format: json, csv, tsv, markdown")
+	cmd.Flags().StringVar(&format, "format", "json", "output format: json, csv, tsv, markdown, pretty_markdown")
 	return cmd
 }

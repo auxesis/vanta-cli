@@ -221,6 +221,14 @@ func printPeopleMarkdown(people []Person) {
 		row := personRow(p)
 		fmt.Println("| " + strings.Join(row, " | ") + " |")
 	}
+
+}
+func printPeoplePrettyMarkdown(people []Person) {
+	rows := make([][]string, len(people))
+	for i, item := range people {
+		rows[i] = personRow(item)
+	}
+	printPrettyMarkdown(personHeaders, rows)
 }
 
 func newPeopleCmd() *cobra.Command {
@@ -249,12 +257,14 @@ func newPeopleCmd() *cobra.Command {
 				}
 			case "markdown":
 				printPeopleMarkdown(people)
+			case "pretty_markdown":
+				printPeoplePrettyMarkdown(people)
 			default:
-				log.Fatalf("unknown format %q: must be json, csv, tsv, or markdown", format)
+				log.Fatalf("unknown format %q: must be json, csv, tsv, markdown, or pretty_markdown", format)
 			}
 		},
 	}
 
-	cmd.Flags().StringVar(&format, "format", "json", "output format: json, csv, tsv, markdown")
+	cmd.Flags().StringVar(&format, "format", "json", "output format: json, csv, tsv, markdown, pretty_markdown")
 	return cmd
 }

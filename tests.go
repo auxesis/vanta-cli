@@ -174,6 +174,14 @@ func printTestsMarkdown(tests []Test) {
 	}
 }
 
+func printTestsPrettyMarkdown(tests []Test) {
+	rows := make([][]string, len(tests))
+	for i, t := range tests {
+		rows[i] = testRow(t)
+	}
+	printPrettyMarkdown(testHeaders, rows)
+}
+
 var validFrameworks = map[string]bool{
 	"soc2": true,
 }
@@ -272,13 +280,15 @@ func newTestsCmd() *cobra.Command {
 				}
 			case "markdown":
 				printTestsMarkdown(tests)
+			case "pretty_markdown":
+				printTestsPrettyMarkdown(tests)
 			default:
-				log.Fatalf("unknown format %q: must be json, csv, tsv, or markdown", format)
+				log.Fatalf("unknown format %q: must be json, csv, tsv, markdown, or pretty_markdown", format)
 			}
 		},
 	}
 
-	cmd.Flags().StringVar(&format, "format", "json", "output format: json, csv, tsv, markdown")
+	cmd.Flags().StringVar(&format, "format", "json", "output format: json, csv, tsv, markdown, pretty_markdown")
 	cmd.Flags().StringVar(&frameworkFlag, "framework", "", "comma-separated framework filter (valid: soc2)")
 	cmd.Flags().StringVar(&statusFlag, "status", "", "comma-separated status filter (valid: OK, DEACTIVATED, NEEDS_ATTENTION, IN_PROGRESS, INVALID, NOT_APPLICABLE)")
 	cmd.Flags().StringVar(&dueBeforeFlag, "due-before", "", "only show tests due before this date (YYYY-MM-DD)")

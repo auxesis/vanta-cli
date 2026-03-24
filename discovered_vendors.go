@@ -111,6 +111,14 @@ func printDiscoveredVendorsMarkdown(vendors []DiscoveredVendor) {
 		row := discoveredVendorRow(v)
 		fmt.Println("| " + strings.Join(row, " | ") + " |")
 	}
+
+}
+func printDiscoveredVendorsPrettyMarkdown(vendors []DiscoveredVendor) {
+	rows := make([][]string, len(vendors))
+	for i, item := range vendors {
+		rows[i] = discoveredVendorRow(item)
+	}
+	printPrettyMarkdown(discoveredVendorHeaders, rows)
 }
 
 func newDiscoveredVendorsCmd() *cobra.Command {
@@ -139,12 +147,14 @@ func newDiscoveredVendorsCmd() *cobra.Command {
 				}
 			case "markdown":
 				printDiscoveredVendorsMarkdown(vendors)
+			case "pretty_markdown":
+				printDiscoveredVendorsPrettyMarkdown(vendors)
 			default:
-				log.Fatalf("unknown format %q: must be json, csv, tsv, or markdown", format)
+				log.Fatalf("unknown format %q: must be json, csv, tsv, markdown, or pretty_markdown", format)
 			}
 		},
 	}
 
-	cmd.Flags().StringVar(&format, "format", "json", "output format: json, csv, tsv, markdown")
+	cmd.Flags().StringVar(&format, "format", "json", "output format: json, csv, tsv, markdown, pretty_markdown")
 	return cmd
 }
