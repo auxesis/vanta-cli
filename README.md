@@ -113,3 +113,22 @@ This runs three checks in sequence:
 - **lint** — `golint` with exit-on-warnings
 - **fmt** — `go fmt` (fails the pipeline if formatting changes are needed)
 - **unit** — `go test ./...`
+
+### Releasing
+
+Releases are automated via [GoReleaser](https://goreleaser.com/) and GitHub Actions. Pushing a `v*` tag triggers the release workflow, which runs tests then publishes a GitHub Release with binaries for macOS and Linux (amd64 and arm64).
+
+To release a new version:
+
+```sh
+git tag v1.2.3
+git push origin v1.2.3
+```
+
+The release workflow will:
+
+1. Run the full test suite
+2. Cross-compile for all platforms
+3. Create a GitHub Release with `.tar.gz` archives and a `checksums.txt`
+
+The version is embedded in the binary at build time — `vanta-cli --version` will print the tag.
