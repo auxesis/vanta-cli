@@ -51,10 +51,13 @@ func printPrettyMarkdown(headers []string, rows [][]string) {
 	}
 }
 
+var version = "dev"
+
 func main() {
 	root := &cobra.Command{
-		Use:   "vanta-cli",
-		Short: "Fetch data from the Vanta API",
+		Use:     "vanta-cli",
+		Short:   "Fetch data from the Vanta API",
+		Version: version,
 	}
 
 	root.AddCommand(
