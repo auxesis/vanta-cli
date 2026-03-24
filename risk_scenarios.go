@@ -11,31 +11,24 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// RiskScenarioOwner holds the owner of a risk scenario.
-type RiskScenarioOwner struct {
-	ID           string `json:"id"`
-	EmailAddress string `json:"emailAddress"`
-	DisplayName  string `json:"displayName"`
-}
-
 // RiskScenario represents a single risk scenario returned by the Vanta API.
 type RiskScenario struct {
-	RiskID             string             `json:"riskId"`
-	Description        string             `json:"description"`
-	IsSensitive        bool               `json:"isSensitive"`
-	Likelihood         int                `json:"likelihood"`
-	Impact             int                `json:"impact"`
-	ResidualLikelihood int                `json:"residualLikelihood"`
-	ResidualImpact     int                `json:"residualImpact"`
-	Categories         []string           `json:"categories"`
-	CIACategories      []string           `json:"ciaCategories"`
-	Treatment          string             `json:"treatment"`
-	Owner              *RiskScenarioOwner `json:"owner"`
-	Note               *string            `json:"note"`
-	RiskRegister       string             `json:"riskRegister"`
-	IsArchived         bool               `json:"isArchived"`
-	ReviewStatus       string             `json:"reviewStatus"`
-	Type               string             `json:"type"`
+	RiskID             string   `json:"riskId"`
+	Description        string   `json:"description"`
+	IsSensitive        *bool    `json:"isSensitive"`
+	Likelihood         int      `json:"likelihood"`
+	Impact             int      `json:"impact"`
+	ResidualLikelihood int      `json:"residualLikelihood"`
+	ResidualImpact     int      `json:"residualImpact"`
+	Categories         []string `json:"categories"`
+	CIACategories      []string `json:"ciaCategories"`
+	Treatment          string   `json:"treatment"`
+	Owner              string   `json:"owner"`
+	Note               *string  `json:"note"`
+	RiskRegister       string   `json:"riskRegister"`
+	IsArchived         bool     `json:"isArchived"`
+	ReviewStatus       string   `json:"reviewStatus"`
+	Type               string   `json:"type"`
 }
 
 // RiskScenarios fetches all risk scenarios from the Vanta API, following pagination.
@@ -49,10 +42,6 @@ var riskScenarioHeaders = []string{
 }
 
 func riskScenarioRow(r RiskScenario) []string {
-	owner := ""
-	if r.Owner != nil {
-		owner = r.Owner.DisplayName
-	}
 	return []string{
 		r.RiskID,
 		r.Type,
@@ -63,7 +52,7 @@ func riskScenarioRow(r RiskScenario) []string {
 		strconv.Itoa(r.ResidualLikelihood),
 		strconv.Itoa(r.ResidualImpact),
 		strings.Join(r.Categories, "|"),
-		owner,
+		r.Owner,
 		strconv.FormatBool(r.IsArchived),
 	}
 }
