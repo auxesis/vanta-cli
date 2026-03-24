@@ -183,10 +183,40 @@ var validStatuses = map[string]bool{
 	"IN_PROGRESS": true, "INVALID": true, "NOT_APPLICABLE": true,
 }
 
+func filterTestsDueBefore(tests []Test, dueBefore time.Time) []Test {
+	if dueBefore.IsZero() {
+		return tests
+	}
+	filtered := tests[:0]
+	for _, t := range tests {
+		d := t.RemediationStatusInfo
+		if d != nil && d.SoonestRemediateByDate != nil && d.SoonestRemediateByDate.Before(dueBefore) {
+			filtered = append(filtered, t)
+		}
+	}
+	return filtered
+}
+
+func filterTestsDueAfter(tests []Test, dueAfter time.Time) []Test {
+	if dueAfter.IsZero() {
+		return tests
+	}
+	filtered := tests[:0]
+	for _, t := range tests {
+		d := t.RemediationStatusInfo
+		if d != nil && d.SoonestRemediateByDate != nil && d.SoonestRemediateByDate.After(dueAfter) {
+			filtered = append(filtered, t)
+		}
+	}
+	return filtered
+}
+
 func newTestsCmd() *cobra.Command {
 	var format string
 	var frameworkFlag string
 	var statusFlag string
+	var dueBeforeFlag string
+	var dueAfterFlag string
 
 	cmd := &cobra.Command{
 		Use:   "tests",
@@ -205,10 +235,28 @@ func newTestsCmd() *cobra.Command {
 				}
 				statuses = append(statuses, s)
 			}
+			var dueBefore time.Time
+			if dueBeforeFlag != "" {
+				var err error
+				dueBefore, err = time.Parse(time.DateOnly, dueBeforeFlag)
+				if err != nil {
+					log.Fatalf("invalid --due-before %q: must be YYYY-MM-DD", dueBeforeFlag)
+				}
+			}
+			var dueAfter time.Time
+			if dueAfterFlag != "" {
+				var err error
+				dueAfter, err = time.Parse(time.DateOnly, dueAfterFlag)
+				if err != nil {
+					log.Fatalf("invalid --due-after %q: must be YYYY-MM-DD", dueAfterFlag)
+				}
+			}
 			tests, err := newClient().TestsFiltered(frameworks, statuses)
 			if err != nil {
 				log.Fatal(err)
 			}
+			tests = filterTestsDueBefore(tests, dueBefore)
+			tests = filterTestsDueAfter(tests, dueAfter)
 			switch format {
 			case "json":
 				if err := printJSON(tests); err != nil {
@@ -233,6 +281,8 @@ func newTestsCmd() *cobra.Command {
 	cmd.Flags().StringVar(&format, "format", "json", "output format: json, csv, tsv, markdown")
 	cmd.Flags().StringVar(&frameworkFlag, "framework", "", "comma-separated framework filter (valid: soc2)")
 	cmd.Flags().StringVar(&statusFlag, "status", "", "comma-separated status filter (valid: OK, DEACTIVATED, NEEDS_ATTENTION, IN_PROGRESS, INVALID, NOT_APPLICABLE)")
+	cmd.Flags().StringVar(&dueBeforeFlag, "due-before", "", "only show tests due before this date (YYYY-MM-DD)")
+	cmd.Flags().StringVar(&dueAfterFlag, "due-after", "", "only show tests due after this date (YYYY-MM-DD)")
 	return cmd
 }
 
