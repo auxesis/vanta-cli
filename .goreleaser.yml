@@ -24,3 +24,6 @@ changelog:
       - "^docs:"
       - "^test:"
       - "^ci:"
+
+release:
+  prerelease: auto
