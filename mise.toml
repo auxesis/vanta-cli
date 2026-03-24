@@ -1,5 +1,6 @@
 [tools]
 go = "latest"
+"go:honnef.co/go/tools/cmd/staticcheck" = "latest"
 
 [tasks."build"]
 description = "Build binary"
@@ -19,7 +20,8 @@ mise run test:unit
 [tasks."test:lint"]
 description = "Run lint tests"
 run = """
-golint -set_exit_status
+go vet
+staticcheck
 """
 
 [tasks."test:fmt"]
