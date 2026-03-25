@@ -61,6 +61,13 @@ func main() {
 	}
 
 	root.AddCommand(
+		&cobra.Command{
+			Use:   "version",
+			Short: "Print the version",
+			Run: func(cmd *cobra.Command, args []string) {
+				fmt.Printf("vanta-cli version %s\n", version)
+			},
+		},
 		newTokenCmd(),
 		newVulnerabilitiesCmd(),
 		newPoliciesCmd(),
